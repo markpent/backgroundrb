@@ -1,0 +1,26 @@
+--- 
+:backgroundrb:
+  :per_environment: true
+	
+development:
+  :backgroundrb:
+    :port: 11006
+    :ip: 0.0.0.0
+    :log: :per_worker
+    :debug_log: true
+    :persistent_disabled: true
+    :result_storage: memcache
+
+  :memcache: "127.0.0.1:11211"
+
+production:
+  :backgroundrb:
+    :port: 11006
+    :ip: 0.0.0.0 
+    :log: :per_worker
+    :debug_log: true
+    :persistent_disabled: true
+    :result_storage: memcache
+
+  :memcache: "127.0.0.1:11211"
+

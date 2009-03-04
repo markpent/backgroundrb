@@ -23,7 +23,14 @@ module BackgrounDRb
 
     def self.read_config(config_file)
       config = YAML.load(ERB.new(IO.read(config_file)).result)
-      environment = ENV["RAILS_ENV"] || config[:backgroundrb][:environment] || "development"
+      if config[:backgroundrb][:per_environment] == true #we have a different config per env...
+        environment = ENV["RAILS_ENV"] || "development"
+        config = config[environment]
+        throw "Unable to get backgrounDRb config for environment #{environment}" if config.nil?
+      else
+        environment = ENV["RAILS_ENV"] || config[:backgroundrb][:environment] || "development"
+      end
+      
 
       if respond_to?(:silence_warnings)
         silence_warnings do
