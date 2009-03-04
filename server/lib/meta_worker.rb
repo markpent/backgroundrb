@@ -354,6 +354,11 @@ module BackgrounDRb
         logger.info($!.backtrace.join("\n"))
       end
     end
+		
+    #backwards compatability with older backgrounDRb.. call this at end of worker so it doesnt stick around.....
+    def delete
+      exit!
+    end
 
     private
     def load_rails_env
