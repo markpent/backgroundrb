@@ -108,7 +108,7 @@ module BackgrounDRb
       raise "Invalid worker name" if !worker_name
       Thread.abort_on_exception = true
 
-      log_flag = BDRB_CONFIG[:backgroundrb][:debug_log].nil? ? true : BDRB_CONFIG[:backgroundrb][:debug_load_rails_env]
+      log_flag = BDRB_CONFIG[:backgroundrb][:debug_log].nil? ? true : BDRB_CONFIG[:backgroundrb][:debug_log] #what was the purpose of :debug_load_rails_env ?
 
       # stores the job key of currently running job
       Thread.current[:job_key] = nil
