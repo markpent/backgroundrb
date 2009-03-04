@@ -112,7 +112,14 @@ module BackgrounDRb
 
       # stores the job key of currently running job
       Thread.current[:job_key] = nil
-      @logger = PacketLogger.new(self,log_flag)
+      #allow 1 log per worker (makes it easier to debug)
+      if BDRB_CONFIG[:backgroundrb][:log] == :per_worker
+        init_per_worker_logger log_flag
+      else
+        @logger = PacketLogger.new(self,log_flag)
+      end
+      
+      
       @thread_pool = ThreadPool.new(self,pool_size || 20,@logger)
       t_worker_key = worker_options && worker_options[:worker_key]
 
@@ -131,6 +138,31 @@ module BackgrounDRb
       return if BDRB_CONFIG[:backgroundrb][:persistent_disabled]
       delay = BDRB_CONFIG[:backgroundrb][:persistent_delay] || 5
       add_periodic_timer(delay.to_i) { check_for_enqueued_tasks }
+    end
+		
+    def init_per_worker_logger(log_flag)
+      @system_logger = PacketLogger.new(self,log_flag)
+      FileUtils.mkdir_p("#{RAILS_HOME}/log/workers/") #make sure the workers log directory exists...
+      #@default_logger = @logger if @default_logger.nil? #store the default logger so we can reset it back later
+      @default_ar_logger = ActiveRecord::Base.logger if @default_ar_logger.nil?
+      begin
+        logfile_name = job_key.nil? ? "#{worker_name}#{worker_key.nil? ? "" : "_#{worker_key}"}" : job_key
+        @logger = Logger.new("#{RAILS_HOME}/log/workers/#{logfile_name}.log")
+        @logger.level = log_flag ? Logger::DEBUG : Logger::INFO
+        @logger.datetime_format = "%Y-%m-%d %H:%M:%S"
+        
+        #we also want a separate log for active record
+        
+        ar_logger = Logger.new("#{RAILS_HOME}/log/workers/#{logfile_name}_ar.log")
+        ar_logger.level = log_flag ? Logger::DEBUG : Logger::INFO
+        ar_logger.datetime_format = "%Y-%m-%d %H:%M:%S"
+        ActiveRecord::Base.logger = ar_logger
+        logger.info("per worker logs setup")
+      rescue Exception => e
+        @logger = @system_logger
+        ActiveRecord::Base.logger = @default_ar_logger
+        logger.error("FAILED per worker logs setup: #{e.message}")
+      end
     end
 
     # return job key from thread global variable
