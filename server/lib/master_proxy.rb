@@ -61,13 +61,15 @@ module BackgrounDRb
           trigger = BackgrounDRb::CronTrigger.new(cron_args)
           worker_method_triggers[key] = {
             :trigger => trigger,:data => value[:data],
-            :runtime => trigger.fire_after_time(Time.now).to_i
+            :runtime => trigger.fire_after_time(Time.now).to_i,
+            :options=>value[:options]
           }
         when Hash
           trigger = BackgrounDRb::Trigger.new(value[:trigger_args])
           worker_method_triggers[key] = {
             :trigger => trigger,:data => value[:trigger_args][:data],
-            :runtime => trigger.fire_after_time(Time.now).to_i
+            :runtime => trigger.fire_after_time(Time.now).to_i,
+            :options=>value[:options]
           }
         end
       end
@@ -95,9 +97,10 @@ module BackgrounDRb
 
     # method will load the worker and invoke worker method
     def load_and_invoke(worker_name,p_method,data)
+      options = data[:options] ? data[:options] : {}
       begin
         require worker_name.to_s
-        worker_key = Packet::Guid.hexdigest
+        worker_key = options[:worker_key].nil? ? Packet::Guid.hexdigest : options[:worker_key]
         @reactor.start_worker(:worker => worker_name,:worker_key => worker_key,:disable_log => true)
         worker_name_key = gen_worker_key(worker_name,worker_key)
         data_request = {:data => { :worker_method => p_method,:arg => data[:data]},
@@ -110,7 +113,7 @@ module BackgrounDRb
         t_worker = @reactor.live_workers[worker_name_key]
         if t_worker
           t_worker.send_request(data_request)
-          t_worker.send_request(exit_request)
+          t_worker.send_request(exit_request) unless options[:no_exit]
         end
       rescue LoadError => e
         puts "no such worker '#{worker_name}'"
